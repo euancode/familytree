@@ -1,27 +1,18 @@
+@import 'govuk-frontend/dist/govuk/govuk-frontend.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Person node hover/selected states */
+.person-node {
+  transition: box-shadow 0.1s ease;
+  cursor: pointer;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.person-node:hover {
+  box-shadow: 0 0 0 3px #ffdd00;
 }
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.person-node-selected {
+  outline: 4px solid #0b0c0c;
+  outline-offset: 0;
 }
