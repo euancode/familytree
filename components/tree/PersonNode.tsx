@@ -15,32 +15,42 @@ const roleStyles: Record<string, string> = {
   default:    'border-[#b1b4b6] bg-white',
 }
 
+const sexColour: Record<string, string> = {
+  M: '#1d70b8',
+  F: '#d63ac3',
+}
+
 export function PersonNode({ individual, isSelected, role = 'default', onClick }: Props) {
-  const displayName = formatDisplayName(individual)
   const lifespan = formatLifespan(individual)
-  const sexIcon = individual.sex === 'M' ? '♂' : individual.sex === 'F' ? '♀' : ''
+  const sex = individual.sex ?? ''
+  const sexIcon = sex === 'M' ? '♂' : sex === 'F' ? '♀' : ''
 
   return (
     <button
       type="button"
       onClick={() => onClick(individual.id)}
-      className={`person-node w-36 text-left border-2 rounded p-2 ${roleStyles[role]} ${isSelected ? 'person-node-selected' : ''}`}
-      aria-label={`${displayName}${lifespan ? ', ' + lifespan : ''}`}
+      style={{ width: '148px', padding: '4px 6px' }}
+      className={`person-node text-left border-2 rounded ${roleStyles[role]} ${isSelected ? 'person-node-selected' : ''}`}
+      aria-label={`${formatDisplayName(individual)}${lifespan ? ', ' + lifespan : ''}`}
       aria-pressed={isSelected}
     >
-      <div className="flex items-start justify-between gap-1">
-        <span className="govuk-body-s font-bold leading-tight text-[#0b0c0c] break-words" style={{ fontSize: '13px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2px' }}>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: '#0b0c0c', lineHeight: '1.2', wordBreak: 'break-word', fontFamily: 'Arial, sans-serif' }}>
           {individual.nameParts.given || '?'}
         </span>
-        {sexIcon && <span className="text-[#505a5f] text-xs flex-shrink-0">{sexIcon}</span>}
+        {sexIcon && (
+          <span style={{ fontSize: '12px', flexShrink: 0, color: sexColour[sex] ?? '#505a5f' }}>
+            {sexIcon}
+          </span>
+        )}
       </div>
       {individual.nameParts.surname && (
-        <div className="govuk-body-s text-[#505a5f] leading-tight uppercase" style={{ fontSize: '11px' }}>
+        <div style={{ fontSize: '10px', color: '#505a5f', textTransform: 'uppercase', lineHeight: '1.2', fontFamily: 'Arial, sans-serif' }}>
           {individual.nameParts.surname}
         </div>
       )}
       {lifespan && (
-        <div className="govuk-body-s text-[#505a5f] mt-1" style={{ fontSize: '11px' }}>
+        <div style={{ fontSize: '10px', color: '#505a5f', marginTop: '2px', fontFamily: 'Arial, sans-serif' }}>
           {lifespan}
         </div>
       )}
@@ -50,8 +60,8 @@ export function PersonNode({ individual, isSelected, role = 'default', onClick }
 
 export function EmptyNode() {
   return (
-    <div className="w-36 h-16 border-2 border-dashed border-[#b1b4b6] rounded flex items-center justify-center">
-      <span className="text-[#505a5f]" style={{ fontSize: '11px' }}>Unknown</span>
+    <div style={{ width: '148px', height: '44px', border: '2px dashed #b1b4b6', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ fontSize: '10px', color: '#505a5f', fontFamily: 'Arial, sans-serif' }}>Unknown</span>
     </div>
   )
 }

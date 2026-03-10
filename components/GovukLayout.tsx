@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-export function GovukLayout({ children, title }: { children: ReactNode; title?: string }) {
+export function GovukLayout({ children }: { children: ReactNode }) {
   return (
     <>
-      <a href="#main-content" className="govuk-skip-link">Skip to main content</a>
+      <a href="#main-content" className="govuk-skip-link" data-module="govuk-skip-link">
+        Skip to main content
+      </a>
 
-      <header className="govuk-header" role="banner">
+      {/* Header */}
+      <header className="govuk-header" data-module="govuk-header">
         <div className="govuk-header__container govuk-width-container">
           <div className="govuk-header__logo">
             <Link href="/" className="govuk-header__link govuk-header__link--homepage">
@@ -15,25 +18,12 @@ export function GovukLayout({ children, title }: { children: ReactNode; title?: 
               </span>
             </Link>
           </div>
-          {title && (
-            <div className="govuk-header__content">
-              <span className="govuk-header__link govuk-header__service-name">{title}</span>
-            </div>
-          )}
         </div>
       </header>
 
-      <div className="govuk-width-container">
-        <div className="govuk-phase-banner">
-          <p className="govuk-phase-banner__content">
-            <strong className="govuk-tag govuk-phase-banner__content__tag">Beta</strong>
-            <span className="govuk-phase-banner__text">
-              This is a new service. Upload a <strong>.ged</strong> file to explore your family tree.
-            </span>
-          </p>
-        </div>
 
-        <main id="main-content" className="govuk-main-wrapper">
+<div className="govuk-width-container">
+<main id="main-content" className="govuk-main-wrapper">
           {children}
         </main>
       </div>

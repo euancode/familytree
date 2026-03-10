@@ -60,8 +60,8 @@ export function SearchList({ selectedId }: { selectedId?: string }) {
                   <span className="govuk-link" style={{ cursor: 'pointer' }}>
                     {formatDisplayName(ind)}
                   </span>
-                  {ind.sex === 'M' && <span className="text-[#505a5f] ml-1 text-xs">♂</span>}
-                  {ind.sex === 'F' && <span className="text-[#505a5f] ml-1 text-xs">♀</span>}
+                  {ind.sex === 'M' && <span style={{ color: '#1d70b8', marginLeft: '4px', fontSize: '12px' }}>♂</span>}
+                  {ind.sex === 'F' && <span style={{ color: '#d63ac3', marginLeft: '4px', fontSize: '12px' }}>♀</span>}
                 </td>
                 <td className="govuk-table__cell py-1 text-[#505a5f]">
                   {formatLifespan(ind)}

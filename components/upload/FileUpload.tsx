@@ -11,6 +11,7 @@ export function FileUpload() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fileName, setFileName] = useState('')
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -20,6 +21,7 @@ export function FileUpload() {
       return
     }
 
+    setFileName(file.name)
     setLoading(true)
     setError('')
 
@@ -34,7 +36,6 @@ export function FileUpload() {
           return
         }
         dispatch({ type: 'LOAD', db })
-        // Navigate to tree with first individual selected
         const first = getAllIndividuals(db)[0]
         router.push(`/tree?id=${first?.id ?? ''}`)
       } catch {
@@ -50,42 +51,57 @@ export function FileUpload() {
   }
 
   return (
-    <div className="govuk-form-group" style={error ? { borderLeft: '4px solid #d4351c', paddingLeft: '15px' } : {}}>
+    <div>
       {error && (
-        <div className="govuk-error-summary" data-module="govuk-error-summary">
-          <div role="alert">
-            <h2 className="govuk-error-summary__title">There is a problem</h2>
-            <div className="govuk-error-summary__body">
-              <ul className="govuk-list govuk-error-summary__list">
-                <li>{error}</li>
-              </ul>
-            </div>
+        <div className="govuk-error-summary" role="alert">
+          <h2 className="govuk-error-summary__title">There is a problem</h2>
+          <div className="govuk-error-summary__body">
+            <ul className="govuk-list govuk-error-summary__list">
+              <li>{error}</li>
+            </ul>
           </div>
         </div>
       )}
 
-      <label className="govuk-label govuk-label--m" htmlFor="gedcom-file">
-        Upload your GEDCOM file
-      </label>
-      <div className="govuk-hint">
-        Export a <strong>.ged</strong> file from software such as Ancestry, FamilySearch, MacFamilyTree, or Gramps.
-        Your file is processed entirely in your browser — nothing is uploaded.
-      </div>
-
       {loading ? (
         <div className="govuk-inset-text">
-          <p className="govuk-body">Parsing your family tree…</p>
+          <p className="govuk-body">Parsing <strong>{fileName}</strong>…</p>
         </div>
       ) : (
-        <input
-          ref={inputRef}
-          className="govuk-file-upload"
-          id="gedcom-file"
-          name="gedcom-file"
-          type="file"
-          accept=".ged"
-          onChange={handleFile}
-        />
+        <div className="govuk-form-group">
+          <label className="govuk-label govuk-label--m" htmlFor="gedcom-file">
+            Select your GEDCOM file
+          </label>
+          <div className="govuk-hint">
+            Files ending in <strong>.ged</strong> — exported from Ancestry, FamilySearch, MacFamilyTree, Gramps, or MyHeritage.
+            Your file stays on your device and is never uploaded.
+          </div>
+
+          {/* Hidden native file input */}
+          <input
+            ref={inputRef}
+            id="gedcom-file"
+            type="file"
+            accept=".ged"
+            onChange={handleFile}
+            style={{ display: 'none' }}
+          />
+
+          {/* Visible file name + button row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+            <button
+              type="button"
+              className="govuk-button govuk-button--secondary"
+              onClick={() => inputRef.current?.click()}
+              style={{ marginBottom: 0 }}
+            >
+              Choose file
+            </button>
+            <span className="govuk-body" style={{ color: fileName ? '#0b0c0c' : '#505a5f' }}>
+              {fileName || 'No file chosen'}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useGedcom } from '@/modules/gedcom/gedcom.context'
 import {
-  getIndividual, getParents, getSpouses, getChildren, formatDisplayName, formatLifespan
+  getIndividual, getParents, getSpouses, getChildren, formatDisplayName, formatLifespan,
+  countAncestorGenerations, countDescendantGenerations, countTotalAncestors, countTotalDescendants
 } from '@/modules/gedcom/gedcom.queries'
 import { PersonNode, EmptyNode } from './PersonNode'
 import type { Individual } from '@/modules/gedcom/gedcom.types'
@@ -53,15 +54,44 @@ export function TreeViewer({ id }: { id: string }) {
   const matGrandparents = mother ? getParents(state.db, mother) : {}
   const spouses = getSpouses(state.db, person)
   const children = getChildren(state.db, person)
+  const ancestorGens = countAncestorGenerations(state.db, person)
+  const descendantGens = countDescendantGenerations(state.db, person)
+  const totalAncestors = countTotalAncestors(state.db, person)
+  const totalDescendants = countTotalDescendants(state.db, person)
+
+  // Year range across all visible people in this tree view
+  const visiblePeople = [
+    patGrandparents.father, patGrandparents.mother,
+    matGrandparents.father, matGrandparents.mother,
+    father, mother,
+    person,
+    ...spouses,
+    ...children,
+  ].filter(Boolean)
+
+  const years = visiblePeople.flatMap(p => [
+    p!.birth?.date?.year,
+    p!.death?.date?.year,
+  ]).filter((y): y is number => y !== undefined)
+
+  const minYear = years.length ? Math.min(...years) : null
+  const maxYear = years.length ? Math.max(...years) : null
 
   return (
     <div>
+      {/* Year range banner */}
+      {minYear && maxYear && (
+        <div className="govuk-caption-m" style={{ marginBottom: '12px', color: '#505a5f' }}>
+          Viewing years <strong>{minYear}</strong> – <strong>{maxYear}</strong>
+        </div>
+      )}
+
       {/* Tree visualisation */}
       <div className="overflow-x-auto pb-4">
         <div className="inline-block min-w-full">
 
-          {/* Grandparents row */}
-          <div className="flex justify-center gap-8 mb-2">
+          {/* Grandparents row — groups are 304px wide (148+8+148), gap 16px between groups */}
+          <div className="flex justify-center mb-1" style={{ gap: '16px' }}>
             <GenerationGroup
               label="Paternal grandparents"
               left={patGrandparents.father}
@@ -76,23 +106,65 @@ export function TreeViewer({ id }: { id: string }) {
             />
           </div>
 
-          {/* Connector grandparents → parents */}
-          <ConnectorRow count={2} />
+          {/* Connector grandparents → parents: two lines, each 304px wide, gap 16px */}
+          <ConnectorRow count={2} groupWidth={304} groupGap={16} nodeWidth={148} />
 
-          {/* Parents row */}
-          <div className="flex justify-center gap-16 mb-2">
+          {/* Parents row — gap 172px so father/mother centres align with grandparent group centres */}
+          <div className="flex justify-center mb-1" style={{ gap: '172px' }}>
             <ParentSlot person={father} label="Father" onSelect={navigate} />
             <ParentSlot person={mother} label="Mother" onSelect={navigate} />
           </div>
 
           {/* Connector parents → selected */}
-          <ConnectorRow count={1} />
+          <ConnectorRow count={1} groupWidth={148} groupGap={0} nodeWidth={148} />
 
           {/* Selected person */}
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-1">
             <div className="flex flex-col items-center gap-1">
               <span className="govuk-body-s text-[#505a5f]">You are viewing</span>
-              <PersonNode individual={person} isSelected role="default" onClick={() => {}} />
+              {/* Larger featured card for selected person */}
+              <div style={{
+                width: '200px',
+                border: '3px solid #0b0c0c',
+                borderRadius: '4px',
+                padding: '8px 10px',
+                background: '#fff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 700, color: '#0b0c0c', lineHeight: '1.2', fontFamily: 'Arial, sans-serif' }}>
+                    {person.nameParts.given || '?'}
+                  </span>
+                  {person.sex && (
+                    <span style={{ fontSize: '14px', color: person.sex === 'M' ? '#1d70b8' : '#d63ac3' }}>
+                      {person.sex === 'M' ? '♂' : '♀'}
+                    </span>
+                  )}
+                </div>
+                {person.nameParts.surname && (
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#0b0c0c', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                    {person.nameParts.surname}
+                  </div>
+                )}
+                {formatLifespan(person) && (
+                  <div style={{ fontSize: '12px', color: '#505a5f', marginTop: '4px', fontFamily: 'Arial, sans-serif' }}>
+                    {formatLifespan(person)}
+                  </div>
+                )}
+              </div>
+              {/* Generation badges */}
+              <div className="flex gap-2 mt-1 flex-wrap justify-center">
+                {ancestorGens > 0 && (
+                  <span className="govuk-tag govuk-tag--blue" style={{ fontSize: '11px' }}>
+                    ↑ {ancestorGens} gen{ancestorGens !== 1 ? 's' : ''} · {totalAncestors} {totalAncestors === 1 ? 'person' : 'people'}
+                  </span>
+                )}
+                {descendantGens > 0 && (
+                  <span className="govuk-tag govuk-tag--green" style={{ fontSize: '11px' }}>
+                    ↓ {descendantGens} gen{descendantGens !== 1 ? 's' : ''} · {totalDescendants} {totalDescendants === 1 ? 'person' : 'people'}
+                  </span>
+                )}
+              </div>
               <Link
                 href={`/person/${person.id}`}
                 className="govuk-link govuk-body-s"
@@ -104,7 +176,7 @@ export function TreeViewer({ id }: { id: string }) {
 
           {/* Spouses */}
           {spouses.length > 0 && (
-            <div className="flex justify-center gap-6 mt-4 mb-2">
+            <div className="flex justify-center gap-3 mt-2 mb-1">
               {spouses.map(s => (
                 <div key={s.id} className="flex flex-col items-center gap-1">
                   <span className="govuk-body-s text-[#505a5f]">
@@ -117,11 +189,11 @@ export function TreeViewer({ id }: { id: string }) {
           )}
 
           {/* Connector → children */}
-          {children.length > 0 && <ConnectorRow count={1} />}
+          {children.length > 0 && <ConnectorRow count={1} groupWidth={148} groupGap={0} nodeWidth={148} />}
 
           {/* Children row */}
           {children.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-4 mt-2">
+            <div className="flex flex-wrap justify-center gap-2 mt-1">
               {children.map(child => (
                 <div key={child.id} className="flex flex-col items-center gap-1">
                   <PersonNode individual={child} role="descendant" onClick={navigate} />
@@ -220,7 +292,7 @@ function GenerationGroup({
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="govuk-body-s text-[#505a5f] text-center" style={{ fontSize: '11px' }}>{label}</span>
-      <div className="flex gap-3">
+      <div style={{ display: 'flex', gap: '8px' }}>
         {left ? <PersonNode individual={left} role="ancestor" onClick={onSelect} /> : <EmptyNode />}
         {right ? <PersonNode individual={right} role="ancestor" onClick={onSelect} /> : <EmptyNode />}
       </div>
@@ -230,21 +302,30 @@ function GenerationGroup({
 
 function ParentSlot({ person, label, onSelect }: { person?: Individual; label: string; onSelect: (id: string) => void }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center" style={{ gap: '2px' }}>
       <span className="govuk-body-s text-[#505a5f]" style={{ fontSize: '11px' }}>{label}</span>
       {person ? <PersonNode individual={person} role="ancestor" onClick={onSelect} /> : <EmptyNode />}
     </div>
   )
 }
 
-function ConnectorRow({ count }: { count: number }) {
+function ConnectorRow({ count, groupWidth, groupGap, nodeWidth }: {
+  count: number
+  groupWidth: number
+  groupGap: number
+  nodeWidth: number
+}) {
+  const numLines = count === 2 ? 2 : 1
+  const containerWidth = numLines === 2 ? groupWidth * 2 + groupGap : nodeWidth
   return (
-    <div className={`flex justify-center gap-${count === 2 ? '8' : '0'} my-1`}>
-      {Array.from({ length: count === 2 ? 2 : 1 }).map((_, i) => (
-        <div key={i} className={`flex justify-center ${count === 2 ? 'w-[306px]' : 'w-36'}`}>
-          <div style={{ width: 2, height: 16, backgroundColor: '#b1b4b6' }} />
-        </div>
-      ))}
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '2px 0' }}>
+      <div style={{ display: 'flex', gap: `${groupGap}px`, width: containerWidth }}>
+        {Array.from({ length: numLines }).map((_, i) => (
+          <div key={i} style={{ width: groupWidth, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 2, height: 10, backgroundColor: '#b1b4b6' }} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

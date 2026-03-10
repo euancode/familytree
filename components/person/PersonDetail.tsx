@@ -45,8 +45,14 @@ export function PersonDetail({ id }: { id: string }) {
   const displayName = formatDisplayName(person)
   const lifespan = formatLifespan(person)
 
+  const treeUrl = `/tree?id=${id}`
+
   return (
     <div>
+      <Link href={treeUrl} className="govuk-button govuk-button--secondary" style={{ marginBottom: '1rem' }}>
+        ← View in tree
+      </Link>
+
       <nav className="govuk-breadcrumbs" aria-label="Breadcrumb">
         <ol className="govuk-breadcrumbs__list">
           <li className="govuk-breadcrumbs__list-item">
@@ -194,7 +200,7 @@ export function PersonDetail({ id }: { id: string }) {
 
       {/* Actions */}
       <div className="flex gap-3 mt-8">
-        <Link href={`/tree?id=${id}`} className="govuk-button govuk-button--secondary">
+        <Link href={treeUrl} className="govuk-button govuk-button--secondary">
           ← View in tree
         </Link>
       </div>

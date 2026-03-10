@@ -1,11 +1,6 @@
 import { parse } from 'parse-gedcom'
+import type { GedcomNode } from 'parse-gedcom'
 import type { GedcomDatabase, Individual, Family, GedcomEvent, GedcomDate } from './gedcom.types'
-
-interface GedcomNode {
-  tag: string
-  data: string
-  tree: GedcomNode[]
-}
 
 function stripAt(id: string): string {
   return id.replace(/@/g, '').trim()
@@ -59,40 +54,48 @@ function parseName(raw: string): Individual['nameParts'] {
   return { given: raw.trim(), surname: '', suffix: '' }
 }
 
-function getTag(nodes: GedcomNode[], tag: string): GedcomNode | undefined {
-  return nodes.find(n => n.tag === tag)
+function getChild(nodes: GedcomNode[], type: string): GedcomNode | undefined {
+  return nodes.find(n => n.type === type)
 }
 
-function getTags(nodes: GedcomNode[], tag: string): GedcomNode[] {
-  return nodes.filter(n => n.tag === tag)
+function getChildren(nodes: GedcomNode[], type: string): GedcomNode[] {
+  return nodes.filter(n => n.type === type)
 }
 
 function parseEvent(node: GedcomNode): GedcomEvent {
-  const dateNode = getTag(node.tree, 'DATE')
-  const placeNode = getTag(node.tree, 'PLAC')
-  const noteNode = getTag(node.tree, 'NOTE')
+  const dateNode = getChild(node.children, 'DATE')
+  const placeNode = getChild(node.children, 'PLAC')
+  const noteNode = getChild(node.children, 'NOTE')
   return {
-    date: dateNode?.data ? parseDate(dateNode.data) : undefined,
-    place: placeNode?.data,
-    note: noteNode?.data,
+    date: dateNode?.value ? parseDate(dateNode.value) : undefined,
+    place: placeNode?.value,
+    note: noteNode?.value,
   }
 }
 
 function parseIndividual(node: GedcomNode): Individual {
-  const id = stripAt(node.data)
-  const nameNode = getTag(node.tree, 'NAME')
-  const nameRaw = nameNode?.data ?? ''
+  const id = stripAt(node.data.xref_id ?? '')
+  const nameNode = getChild(node.children, 'NAME')
+  const nameRaw = nameNode?.value ?? ''
   const nameParts = parseName(nameRaw)
-  const sexNode = getTag(node.tree, 'SEX')
-  const sex = sexNode?.data as Individual['sex'] | undefined
+  const sexNode = getChild(node.children, 'SEX')
+  const sex = sexNode?.value as Individual['sex'] | undefined
 
-  const birthNode = getTag(node.tree, 'BIRT')
-  const deathNode = getTag(node.tree, 'DEAT')
+  const birthNode = getChild(node.children, 'BIRT')
+  const deathNode = getChild(node.children, 'DEAT')
 
-  const familyAsSpouse = getTags(node.tree, 'FAMS').map(n => stripAt(n.data))
-  const familyAsChild = getTags(node.tree, 'FAMC').map(n => stripAt(n.data))
+  // FAMS/FAMC store the family xref as data.pointer
+  const familyAsSpouse = getChildren(node.children, 'FAMS')
+    .map(n => stripAt(n.data.pointer ?? n.value ?? ''))
+    .filter(Boolean)
 
-  const notes = getTags(node.tree, 'NOTE').map(n => n.data).filter(Boolean)
+  const familyAsChild = getChildren(node.children, 'FAMC')
+    .map(n => stripAt(n.data.pointer ?? n.value ?? ''))
+    .filter(Boolean)
+
+  const notes = getChildren(node.children, 'NOTE')
+    .map(n => n.value ?? '')
+    .filter(Boolean)
 
   return {
     id,
@@ -108,36 +111,37 @@ function parseIndividual(node: GedcomNode): Individual {
 }
 
 function parseFamily(node: GedcomNode): Family {
-  const id = stripAt(node.data)
-  const husbNode = getTag(node.tree, 'HUSB')
-  const wifeNode = getTag(node.tree, 'WIFE')
-  const childNodes = getTags(node.tree, 'CHIL')
-  const marrNode = getTag(node.tree, 'MARR')
-  const divNode = getTag(node.tree, 'DIV')
+  const id = stripAt(node.data.xref_id ?? '')
+
+  const husbNode = getChild(node.children, 'HUSB')
+  const wifeNode = getChild(node.children, 'WIFE')
+  const childNodes = getChildren(node.children, 'CHIL')
+  const marrNode = getChild(node.children, 'MARR')
+  const divNode = getChild(node.children, 'DIV')
 
   return {
     id,
-    husbandId: husbNode ? stripAt(husbNode.data) : undefined,
-    wifeId: wifeNode ? stripAt(wifeNode.data) : undefined,
-    childIds: childNodes.map(n => stripAt(n.data)),
+    husbandId: husbNode ? stripAt(husbNode.data.pointer ?? husbNode.value ?? '') : undefined,
+    wifeId: wifeNode ? stripAt(wifeNode.data.pointer ?? wifeNode.value ?? '') : undefined,
+    childIds: childNodes.map(n => stripAt(n.data.pointer ?? n.value ?? '')).filter(Boolean),
     marriage: marrNode ? parseEvent(marrNode) : undefined,
     divorce: divNode ? parseEvent(divNode) : undefined,
   }
 }
 
 export function parseGedcom(content: string, fileName: string): GedcomDatabase {
-  const nodes: GedcomNode[] = parse(content)
+  const root = parse(content)
 
   const individuals = new Map<string, Individual>()
   const families = new Map<string, Family>()
 
-  for (const node of nodes) {
-    if (node.tag === 'INDI') {
+  for (const node of root.children) {
+    if (node.type === 'INDI') {
       const ind = parseIndividual(node)
-      individuals.set(ind.id, ind)
-    } else if (node.tag === 'FAM') {
+      if (ind.id) individuals.set(ind.id, ind)
+    } else if (node.type === 'FAM') {
       const fam = parseFamily(node)
-      families.set(fam.id, fam)
+      if (fam.id) families.set(fam.id, fam)
     }
   }
 

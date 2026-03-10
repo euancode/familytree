@@ -13,17 +13,17 @@ export default function TreePage({
   const id = typeof searchParams.id === 'string' ? searchParams.id : ''
 
   return (
-    <GovukLayout title="Family Tree">
-      <div className="govuk-grid-row">
-        {/* Main tree panel */}
-        <div className="govuk-grid-column-two-thirds">
+    <GovukLayout>
+      <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+        {/* Main tree panel — scrollable, clipped */}
+        <div style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}>
           <Suspense fallback={<p className="govuk-body">Loading…</p>}>
             <TreeViewer id={id} />
           </Suspense>
         </div>
 
-        {/* Sidebar: search */}
-        <div className="govuk-grid-column-one-third">
+        {/* Sidebar: search — fixed width, always visible */}
+        <div style={{ flex: '0 0 280px', width: '280px' }}>
           <h2 className="govuk-heading-s">All people</h2>
           <Suspense fallback={null}>
             <SearchList selectedId={id} />

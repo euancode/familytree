@@ -4,6 +4,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force correct GOV.UK header colours — Tailwind preflight removal can break :visited */
+.govuk-header {
+  background-color: #0b0c0c !important;
+  border-bottom: 10px solid #1d70b8 !important;
+}
+
+.govuk-header__link,
+.govuk-header__link:link,
+.govuk-header__link:visited,
+.govuk-header__link:hover,
+.govuk-header__link:focus,
+.govuk-header__link:active {
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+.govuk-header__logotype-text {
+  color: #ffffff !important;
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  font-family: Arial, sans-serif !important;
+}
+
 /* Person node hover/selected states */
 .person-node {
   transition: box-shadow 0.1s ease;

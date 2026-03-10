@@ -23,20 +23,14 @@ export function getSpouses(db: GedcomDatabase, individual: Individual): Individu
   for (const famId of individual.familyAsSpouse) {
     const fam = getFamily(db, famId)
     if (!fam) continue
-    const spouseId = individual.sex === 'F' ? fam.husbandId : fam.wifeId
-    if (spouseId) {
-      const spouse = getIndividual(db, spouseId)
-      if (spouse) spouses.push(spouse)
-    } else {
-      // Unknown sex — try both
-      if (fam.husbandId && fam.husbandId !== individual.id) {
-        const s = getIndividual(db, fam.husbandId)
-        if (s) spouses.push(s)
-      }
-      if (fam.wifeId && fam.wifeId !== individual.id) {
-        const s = getIndividual(db, fam.wifeId)
-        if (s) spouses.push(s)
-      }
+    // Return whoever is in the FAM record that isn't this person
+    // Works for married couples, same-sex couples, and unmarried partners
+    const partnerIds = [fam.husbandId, fam.wifeId].filter(
+      (pid): pid is string => !!pid && pid !== individual.id
+    )
+    for (const pid of partnerIds) {
+      const partner = getIndividual(db, pid)
+      if (partner) spouses.push(partner)
     }
   }
   return spouses
@@ -94,6 +88,46 @@ export function formatYear(individual: Individual): { birth?: number; death?: nu
     birth: individual.birth?.date?.year,
     death: individual.death?.date?.year,
   }
+}
+
+export function countAncestorGenerations(db: GedcomDatabase, individual: Individual, depth = 0): number {
+  const { father, mother } = getParents(db, individual)
+  if (!father && !mother) return depth
+  const f = father ? countAncestorGenerations(db, father, depth + 1) : depth
+  const m = mother ? countAncestorGenerations(db, mother, depth + 1) : depth
+  return Math.max(f, m)
+}
+
+export function countDescendantGenerations(db: GedcomDatabase, individual: Individual, depth = 0): number {
+  const children = getChildren(db, individual)
+  if (children.length === 0) return depth
+  return Math.max(...children.map(c => countDescendantGenerations(db, c, depth + 1)))
+}
+
+export function countTotalAncestors(db: GedcomDatabase, individual: Individual, visited = new Set<string>()): number {
+  const { father, mother } = getParents(db, individual)
+  let count = 0
+  for (const parent of [father, mother]) {
+    if (parent && !visited.has(parent.id)) {
+      visited.add(parent.id)
+      count++
+      count += countTotalAncestors(db, parent, visited)
+    }
+  }
+  return count
+}
+
+export function countTotalDescendants(db: GedcomDatabase, individual: Individual, visited = new Set<string>()): number {
+  const children = getChildren(db, individual)
+  let count = 0
+  for (const child of children) {
+    if (!visited.has(child.id)) {
+      visited.add(child.id)
+      count++
+      count += countTotalDescendants(db, child, visited)
+    }
+  }
+  return count
 }
 
 export function formatLifespan(individual: Individual): string {
